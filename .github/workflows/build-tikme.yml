@@ -40,8 +40,18 @@ jobs:
       run: flutter build apk --release
     
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # 👈 Updated to v4
       with:
         name: tikme-app-release
         path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
+    
+    - name: Build App Bundle
+      run: flutter build appbundle --release
+    
+    - name: Upload App Bundle
+      uses: actions/upload-artifact@v4  # 👈 Updated to v4
+      with:
+        name: tikme-app-bundle
+        path: build/app/outputs/bundle/release/app-release.aab
         retention-days: 30

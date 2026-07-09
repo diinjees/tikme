@@ -1,0 +1,385 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tikme/providers/language_provider.dart';
+import 'package:tikme/screens/signup_screen.dart';
+import 'package:tikme/services/auth_service.dart';
+import 'package:provider/provider.dart';
+import 'package:tikme/l10n/app_localizations.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  void _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      await Provider.of<AuthService>(
+        context,
+        listen: false,
+      ).signIn(_emailController.text, _passwordController.text);
+      if (context.mounted) {
+        context.go('/feed');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.loginFailed(e.toString()),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations appLocalizations = AppLocalizations.of(context)!;
+    final localeProvider = Provider.of<LanguageProvider>(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Back button
+              Text(
+                appLocalizations.login,
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Welcome back! Please enter your details',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // Login Form
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    // Email Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          if (!isDark)
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          labelText: appLocalizations.emailHint,
+                          prefixIcon: Icon(
+                            Icons.email_rounded,
+                            color: theme.colorScheme.primary,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(value)) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Password Field
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          if (!isDark)
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: appLocalizations.passwordHint,
+                          prefixIcon: Icon(
+                            Icons.lock_rounded,
+                            color: theme.colorScheme.primary,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.5,
+                              ),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 4) {
+                            return 'Password must be at least 4 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                        ),
+                        child: _isLoading
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    theme.colorScheme.onPrimary,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                appLocalizations.loginButton,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Divider
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Or continue with',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Sign up link
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SignupScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        appLocalizations.noAccountSignup,
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Language Selector
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.colorScheme.onSurface.withOpacity(0.1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.language_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Language',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    DropdownButton<Locale>(
+                      value: localeProvider.locale,
+                      underline: const SizedBox(),
+                      borderRadius: BorderRadius.circular(12),
+                      dropdownColor: theme.cardColor,
+                      onChanged: (Locale? newLocale) {
+                        if (newLocale != null) {
+                          localeProvider.setLocale(newLocale);
+                        }
+                      },
+                      items:
+                          const [
+                            Locale('en', ''),
+                            Locale('so', ''),
+                            Locale('am', ''),
+                          ].map<DropdownMenuItem<Locale>>((Locale value) {
+                            String languageName;
+                            String flag;
+                            switch (value.languageCode) {
+                              case 'en':
+                                languageName = 'English';
+                                flag = '🇺🇸';
+                                break;
+                              case 'so':
+                                languageName = 'Soomaali';
+                                flag = '🇸🇴';
+                                break;
+                              case 'am':
+                                languageName = 'Amharic';
+                                flag = '🇪🇹';
+                                break;
+                              default:
+                                languageName = '';
+                                flag = '';
+                            }
+                            return DropdownMenuItem<Locale>(
+                              value: value,
+                              child: Row(
+                                children: [
+                                  Text(flag),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    languageName,
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
